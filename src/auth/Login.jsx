@@ -14,7 +14,7 @@ export default function FromLogin() {
       const { user, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: window.location.origin + "/dashboard", // URL sau khi đăng nhập thành công
+          redirectTo: "https://chat-app-six-ebon.vercel.app/dashboard", // URL sau khi đăng nhập thành công
         },
       });
 
