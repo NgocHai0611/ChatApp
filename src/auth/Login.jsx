@@ -11,11 +11,10 @@ export default function FromLogin() {
 
     try {
       // Đăng nhập qua OAuth Discord
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { user, error } = await supabase.auth.signInWithOAuth({
         provider: "discord",
         options: {
-          redirectTo:
-            "https://chat-5hpn6ifel-ngochai0611s-projects.vercel.app/dashboard", // URL sau khi đăng nhập thành công
+          redirectTo: window.location.origin + "/dashboard", // URL sau khi đăng nhập thành công
         },
       });
 
@@ -24,13 +23,11 @@ export default function FromLogin() {
         return;
       }
 
-      // Kiểm tra kết quả trả về
-      if (data) {
-        console.log("User logged in:", data.user);
+      console.log(window.location.origin + "/dashboard");
 
-        // Redirect sau khi đăng nhập thành công
-        window.location.href =
-          "https://chat-5hpn6ifel-ngochai0611s-projects.vercel.app/dashboard";
+      // Nếu không có lỗi, điều hướng đến trang Dashboard
+      if (user) {
+        console.log("User logged in:", user);
       }
     } catch (error) {
       setError(error.message);
