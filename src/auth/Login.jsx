@@ -12,7 +12,7 @@ export default function FromLogin() {
     try {
       // Đăng nhập qua OAuth Discord
       const { user, error } = await supabase.auth.signInWithOAuth({
-        provider: "discord",
+        provider: "google",
         options: {
           redirectTo: window.location.origin + "/dashboard", // URL sau khi đăng nhập thành công
         },
