@@ -12,9 +12,9 @@ export default function FromLogin() {
     try {
       // Đăng nhập qua OAuth Discord
       const { user, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
+        provider: "discord",
         options: {
-          redirectTo: "https://chat-app-six-ebon.vercel.app/dashboard", // URL sau khi đăng nhập thành công
+          redirectTo: window.location.origin + "/dashboard", // URL sau khi đăng nhập thành công
         },
       });
 
