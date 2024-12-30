@@ -1,11 +1,35 @@
 import "../assets/css/login.css";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../superbase";
+import { useState } from "react";
 export default function FromLogin() {
   const navigate = useNavigate();
-  const handelLogin = (e) => {
-    // Chặn sự kiện submit của form
-    e.preventDefault();
-    navigate("/dashboard");
+  const [error, setError] = useState("");
+
+  const handelLogin = async (e) => {
+    e.preventDefault(); // Ngăn reload trang
+
+    try {
+      // Đăng nhập qua OAuth Discord
+      const { user, error } = await supabase.auth.signInWithOAuth({
+        provider: "discord",
+        options: {
+          redirectTo: window.location.origin + "/dashboard", // URL sau khi đăng nhập thành công
+        },
+      });
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      // Nếu không có lỗi, điều hướng đến trang Dashboard
+      if (user) {
+        console.log("User logged in:", user);
+      }
+    } catch (error) {
+      setError(error.message);
+    }
   };
 
   return (
