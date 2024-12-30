@@ -83,7 +83,7 @@ export default function FromLogin() {
         </div>
       </div>
       <button className="button-confirm" onClick={handelLogin}>
-        Let`s go →
+        Let`s go
       </button>
     </form>
   );
