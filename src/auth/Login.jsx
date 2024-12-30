@@ -23,7 +23,7 @@ export default function FromLogin() {
         return;
       }
 
-      console.log(window.location.origin + "/dashboard");
+      console.log(window.location.origin);
 
       // Nếu không có lỗi, điều hướng đến trang Dashboard
       if (user) {
