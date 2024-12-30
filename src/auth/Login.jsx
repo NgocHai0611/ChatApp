@@ -2,7 +2,9 @@ import "../assets/css/login.css";
 import { useNavigate } from "react-router-dom";
 export default function FromLogin() {
   const navigate = useNavigate();
-  const handelLogin = () => {
+  const handelLogin = (e) => {
+    // Chặn sự kiện submit của form
+    e.preventDefault();
     navigate("/dashboard");
   };
 
