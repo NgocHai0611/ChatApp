@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../superbase";
+import "../assets/css/dashboardchat.css";
 
 export default function DashBoard() {
   const [user, setUser] = useState(null);
@@ -25,17 +26,33 @@ export default function DashBoard() {
   }, []);
 
   return (
-    <div>
-      <h1>Welcome to the Dashboard</h1>
+    <div style={{ width: "100%", height: "100vh", backgroundColor: "blue" }}>
       {user ? (
         <div>
           <p>Email của bạn: {user.email}</p>
+          <div className="container">
+            <div className="nav-bar">
+              <img
+                src={avatar}
+                alt="Avatar"
+                style={{ width: "30px", height: "30px", borderRadius: "50%" }}
+              />
 
-          <img
-            src={avatar}
-            alt="Avatar"
-            style={{ width: "100px", height: "100px", borderRadius: "50%" }}
-          />
+              <a>Chat SynH</a>
+              <div className="close">
+                <div className="line one" />
+                <div className="line two" />
+              </div>
+            </div>
+
+            <div className="container--chat">
+              <div className="listUser"></div>
+
+              <div className="area--chat"></div>
+            </div>
+
+            <div />
+          </div>
         </div>
       ) : (
         <p>Đang tải thông tin người dùng...</p>

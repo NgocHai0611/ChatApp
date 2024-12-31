@@ -1,9 +1,7 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import "./App.css";
-import DashBoard from "./auth/DashBoard";
+
 import FromLogin from "./auth/Login";
+import DashBoard from "./auth/DashBoard";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Navigate } from "react-router-dom";
 
