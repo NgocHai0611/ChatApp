@@ -1,0 +1,90 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 500px;
+  height: 600px;
+  text-align: center;
+  position: relative;
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.list__user--result {
+  list-style: none;
+}
+
+.conatiner__input--find {
+  display: flex;
+  position: relative;
+  height: 30px;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.input__search--phoneNumber {
+  width: 96%;
+  height: 30px;
+  border-radius: 30px;
+  padding-left: 20px;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 16px;
+  margin: 5px 0;
+}
+
+/* Ẩn checkbox mặc định */
+.checkbox-container input {
+  display: none;
+}
+
+/* Tạo hình tròn */
+.custom-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #007bff;
+  border-radius: 50%;
+  display: inline-block;
+  position: relative;
+  margin-right: 8px;
+}
+
+/* Khi checkbox được chọn */
+.checkbox-container input:checked + .custom-checkbox {
+  background-color: #007bff;
+}
+
+/* Dấu check bên trong */
+.checkbox-container input:checked + .custom-checkbox::after {
+  content: "✔";
+  color: white;
+  font-size: 12px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}

@@ -1,0 +1,28 @@
+.icon__search--users {
+  position: absolute;
+}
+
+.input__search {
+  width: 400px;
+  height: 30px;
+  padding-left: 20px;
+}
+
+.layout__search {
+  position: relative;
+  width: 90%;
+  height: 30px;
+  display: flex;
+  align-items: center;
+}
+
+.container__list--result {
+  width: 34.8%;
+  height: 300px;
+  position: absolute;
+  background-color: white;
+}
+
+.container__list--result > ul {
+  list-style: none;
+}

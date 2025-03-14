@@ -1,16 +1,70 @@
 import "../assets/css/login.css";
-import { useNavigate } from "react-router-dom";
+import { data, useNavigate } from "react-router-dom";
 import { supabase } from "../superbase";
 import { useState } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
+
 export default function FromLogin() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
 
-  const handelLogin = async (e) => {
-    e.preventDefault(); // Ngăn reload trang
+  const [email, setEmail] = useState();
+  const [password, setPassword] = useState();
 
+  const handleLogin = () => {
+    console.log(email.toLowerCase(), password.toLowerCase());
+
+    axios
+      .post("http://localhost:3000/users/login", { email, password })
+      .then((response) => {
+        if (response.status === 200) {
+          // Hiển thị thông báo thành công
+          toast.success("Login thành công! 🎉", {
+            position: "top-right",
+            autoClose: 3000, // Đặt thời gian đóng thông báo
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+
+          // Chuyển trang sau khi thông báo hoàn thành
+          setTimeout(() => {
+            const user = response.data;
+            user.provider = "tradition";
+            console.log(user);
+            navigate("/dashboard", { state: user }); // Điều hướng đến trang khác
+          }, 3000); // Thời gian chờ bằng thời gian autoClose của toast
+        } else {
+          toast.error("Đăng nhập không thành công. Vui lòng thử lại!", {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+        }
+      })
+      .catch((error) => {
+        toast.error("Đã xảy ra lỗi khi đăng nhập!", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+        console.error("Login error:", error);
+      });
+  };
+
+  const handelLoginAuth = async (e) => {
+    e.preventDefault(); // Ngăn reload trang
     try {
-      // Đăng nhập qua OAuth Discord
+      // Đăng nhập qua OAuth Discord , GG
       const { user, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -22,8 +76,6 @@ export default function FromLogin() {
         setError(error.message);
         return;
       }
-
-      console.log(window.location.origin);
 
       // Nếu không có lỗi, điều hướng đến trang Dashboard
       if (user) {
@@ -41,18 +93,22 @@ export default function FromLogin() {
         <br />
         <span>sign up to continue</span>
       </div>
-      <input className="input" name="email" placeholder="Email" type="email" />
       <input
         className="input"
-        name="password"
+        placeholder="Email"
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <input
+        className="input"
         placeholder="Password"
         type="password"
+        onChange={(e) => setPassword(e.target.value)}
       />
       <div className="login-with">
         <div className="button-log">
           <b>t</b>
         </div>
-        <div className="button-log">
+        <div className="button-log btn-log__gg" onClick={handelLoginAuth}>
           <svg
             xmlnsXlink="http://www.w3.org/1999/xlink"
             xmlns="http://www.w3.org/2000/svg"
@@ -84,9 +140,10 @@ export default function FromLogin() {
           </svg>
         </div>
       </div>
-      <button className="button-confirm" onClick={handelLogin}>
+      <button className="button-confirm" onClick={handleLogin} type="button">
         Let`s go
       </button>
+      <ToastContainer />
     </form>
   );
 }
