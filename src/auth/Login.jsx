@@ -17,7 +17,10 @@ export default function FromLogin() {
     console.log(email.toLowerCase(), password.toLowerCase());
 
     axios
-      .post("http://localhost:3000/users/login", { email, password })
+      .post("https://chatapp-v1-dr09.onrender.com/users/login", {
+        email,
+        password,
+      })
       .then((response) => {
         if (response.status === 200) {
           // Hiển thị thông báo thành công
