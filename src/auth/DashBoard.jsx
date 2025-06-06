@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "../superbase";
 import "../assets/css/dashboardchat.css";
 import { io } from "socket.io-client";
@@ -12,29 +12,43 @@ import {
   faVideo,
   faPhone,
   faUserGroup,
+  faBell,
 } from "@fortawesome/free-solid-svg-icons";
 
 import SearchUser from "../assets/components/SearchUser";
 import ModalAddUserGroup from "../assets/components/ModalAddUserToGroup";
-
-var socket;
+import Notifycation from "../assets/components/Notifycation";
 
 export default function DashBoard() {
   const [user, setUser] = useState(null);
   const [avatar, setAvatar] = useState("");
   const [messageSend, setMessageSend] = useState("");
   const [listContact, setlistContact] = useState([]);
-  const ENDPOINT = "http://localhost:3000"; //
+  const ENDPOINT = "https://chatapp-v1-dr09.onrender.com"; //
   const [stateBoxChat, setStateBoxChat] = useState("none");
   const [messageTarget, setMessageTarget] = useState("");
   const [listMessage, setListMessage] = useState([]);
   const [idUser, setIdUser] = useState("");
 
   const [chatMessages, setChatMessages] = useState([]); // Lưu trữ tin nhắn đã nhận
+  const [messageSendStatus, setMessageSendStatus] = useState("Đã Gửi");
   const [idChatRoom, setIdChatRoom] = useState("");
 
   const [chosenEmoji, setChosenEmoji] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [idLastestMessage, setIdLastestMessage] = useState("");
+
+  const [typeModal, setTypeModal] = useState("");
+
+  // Variable Này dùng để đánh dấu người nhận có tin nhắn mới mà chưa đọc
+  const [statusSeen, setStatusSeen] = useState(false);
+
+  const handleOpenModal = (type) => {
+    setTypeModal(type);
+    setIsModalOpen(true);
+  };
+
+  const socketRef = useRef(null);
 
   // Location dùng để lấy dữ liệu từ router
   const location = useLocation();
@@ -45,35 +59,111 @@ export default function DashBoard() {
     setListMessage([]);
     setStateBoxChat("display");
     setIdChatRoom(chat._id);
+    setIdLastestMessage(chat.latestMessage);
+    handleSentMessage(chat);
   };
 
+  // Fc show thong tin sau khi đăng nhập bằng auth / normal
   const handleShowUserNormal = (user, img) => {
     setUser(user);
     setAvatar(img);
     setIdUser(user.id);
   };
 
-  const handleShowListMessage = (idUser) => {
-    axios.get(`http://localhost:3000/chat/${idUser}`).then((response) => {
-      setlistContact(response.data);
-      setChatMessages(response.data);
-    });
+  // Show Tất cả các đoạn tin nhắn mà người đùng đã nhắn
+  function handleShowListMessage(idUser) {
+    axios
+      .get(`https://chatapp-v1-dr09.onrender.com/chat/${idUser}`)
+      .then((response) => {
+        const sortedList = response.data.sort(
+          (a, b) => new Date(b.lastActivityTime) - new Date(a.lastActivityTime)
+        );
+        console.log(sortedList);
+        setlistContact(sortedList);
+        setChatMessages(sortedList);
+      });
+  }
+
+  const handleShowMessageByTime = (idUser) => {
+    if (!idUser) {
+      console.warn(
+        "handleShowMessageByTime được gọi với idUser null/undefined"
+      );
+      return;
+    }
+
+    console.log("Đang gọi handleShowMessageByTime với", idUser);
+    axios
+      .get(`https://chatapp-v1-dr09.onrender.com/chat/${idUser}`)
+      .then((response) => {
+        const sortedList = response.data.sort(
+          (a, b) => new Date(b.lastActivityTime) - new Date(a.lastActivityTime)
+        );
+        console.log("Danh sách sau sort:", sortedList);
+        setlistContact([...sortedList]);
+      });
   };
 
+  // Fc gửi tin nhắn và lưu tin nhắn
   const sendMessage = () => {
     const data = {
       senderID: idUser,
-      chatRoomID: idChatRoom,
-      message: messageSend,
+      chatID: idChatRoom,
+      content: messageSend,
+      readBy: [],
+      timestamp: new Date(),
     };
-
     setMessageSend("");
-    socket.emit("send_message", data);
+    setListMessage((prevList) => [...prevList, data]);
+    setMessageSendStatus("Đang gửi.....");
+
+    axios
+      .post("https://chatapp-v1-dr09.onrender.com/messages/sendMessage", data)
+      .then((respone) => {
+        if (respone.status === 200) {
+          handleShowMessageByTime(idUser);
+          setMessageSendStatus("Đã Gửi");
+        }
+      })
+      .then(() => {})
+      .catch((err) => {
+        console.log(err);
+      });
   };
 
-  const onEmojiClick = (event, emojiObject) => {
-    console.log(emojiObject.emoji);
-    setChosenEmoji(emojiObject.emoji);
+  const handleSentMessage = (chat) => {
+    // console.log(chat, idLastestMessage);
+    const messageLastest = chat.latestMessage;
+
+    setIdLastestMessage(messageLastest);
+    const resultMessageLastest = chat.messages.find(
+      (message) => message._id === messageLastest
+    );
+
+    console.log(resultMessageLastest);
+
+    if (
+      resultMessageLastest.readBy.length <= 0 &&
+      resultMessageLastest.senderID !== idUser
+    ) {
+      axios
+        .post(
+          `https://chatapp-v1-dr09.onrender.com/messages/seenMessages/${resultMessageLastest._id}`,
+          {
+            idUserRead: idUser,
+          }
+        )
+        .then((respone) => {
+          if (respone.status === 200) {
+            setStatusSeen(true);
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    } else {
+      setStatusSeen(false);
+    }
   };
 
   useEffect(() => {
@@ -101,26 +191,40 @@ export default function DashBoard() {
       fetchUser();
     }
 
-    // Khởi tạo socket một lần khi component mount
-    socket = io(ENDPOINT);
+    if (!socketRef.current) {
+      socketRef.current = io(ENDPOINT);
+    }
 
-    // Lưu socket ID
-    socket.on("connect", () => {
-      console.log("Connected with ID:", socket.id);
+    socketRef.current.on("connect", () => {
+      console.log("Connected with ID:", socketRef.current.id);
     });
 
-    socket.emit("register", idUser, idChatRoom); // gửi userId tới server de join room
+    // Đăng ký room riêng dựa trên userID
+    socketRef.current.emit("register", idUser);
 
-    socket.on("receive_message", (data) => {
-      setListMessage((prevList) => [...prevList, data]);
+    // Nhận tin nhắn từ server
+    socketRef.current.on("receive_message", (data) => {
+      console.log("Received message event");
+      handleShowMessageByTime(idUser);
+      if (data.chatID === idChatRoom) {
+        setListMessage((prevList) => [...prevList, data]);
+      }
+    });
+
+    // // Nhận thông báo tin nhắn mới
+    socketRef.current.on("new_message_notification", (data) => {
+      console.log("Co Tin Nhan Toi Tu", data.senderID, idUser);
     });
 
     // Cleanup khi component unmount
     return () => {
-      socket.disconnect();
-      socket.off("receive_message"); // Gỡ sự kiện khi component bị unmount
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+
+        socketRef.current = null;
+      }
     };
-  }, [idChatRoom]);
+  }, [idChatRoom, isModalOpen]);
 
   return (
     <div style={{ width: "100%", height: "100vh", backgroundColor: "blue" }}>
@@ -149,17 +253,24 @@ export default function DashBoard() {
                   <SearchUser></SearchUser>
                   <FontAwesomeIcon
                     icon={faUserGroup}
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => handleOpenModal("createGroup")}
                   />
-
+                  <span>+</span>
+                  {/* Modal Create New Group */}
                   <ModalAddUserGroup
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
-                  >
-                    <h2>Thêm Thành Viên</h2>
-                  </ModalAddUserGroup>
+                    type={typeModal}
+                    idUser={idUser}
+                  />
+                  <div className="container__notifycation">
+                    <FontAwesomeIcon icon={faBell} />
+                    <Notifycation idUser={idUser}></Notifycation>
+                  </div>
                 </div>
 
+                {/* Gub */}
+                {/* {console.log(listContact)} */}
                 {listContact.map((chat, index) => (
                   <li
                     className="user__item"
@@ -169,16 +280,40 @@ export default function DashBoard() {
                     {chat.isGroupChat ? (
                       <div className="container__nameChat">
                         <h1>{chat.chatName}</h1>
+                        {chat.lastUserSender === idUser ? (
+                          <div>
+                            <span>You: </span>
+                            <span>{chat.latestMessage}</span>
+                          </div>
+                        ) : (
+                          <div>
+                            <span>{chat.lastUserSender}: </span>
+                            <span>{chat.latestMessage}</span>
+                          </div>
+                        )}
                         <div className="container__feature"></div>
                       </div>
                     ) : (
-                      <h1>
-                        {
-                          chat.userDetails.find(
-                            (userMap) => userMap._id !== user.id
-                          )?.name
-                        }
-                      </h1> // Hiển thị user khác trong chat riêng
+                      <div className="container__nameChat">
+                        <h1>
+                          {
+                            chat.userDetails.find(
+                              (userMap) => userMap._id !== user.id
+                            )?.name
+                          }
+                        </h1>
+                        {chat.lastUserSender === idUser ? (
+                          <div style={{ display: "flex" }}>
+                            <span>You: </span>
+                            <span>{chat.latestMessage}</span>
+                          </div>
+                        ) : (
+                          <div>
+                            <span>{chat.latestMessage}</span>
+                          </div>
+                        )}
+                        <div className="container__feature"></div>
+                      </div>
                     )}
                   </li>
                 ))}
@@ -206,10 +341,19 @@ export default function DashBoard() {
                             <FontAwesomeIcon
                               className="size_feauter--icon"
                               icon={faUserPlus}
+                              onClick={() => handleOpenModal("addUser")}
                             />
                             <FontAwesomeIcon
                               className="size_feauter--icon"
                               icon={faVideo}
+                            />
+
+                            <ModalAddUserGroup
+                              isOpen={isModalOpen}
+                              onClose={() => setIsModalOpen(false)}
+                              type={typeModal}
+                              chatID={idChatRoom}
+                              idUser={idUser}
                             />
                           </div>
                         </div>
@@ -237,7 +381,7 @@ export default function DashBoard() {
                       )}
 
                       {/* Hiển thị các tin nhắn */}
-
+                      {/* {console.log(chatMessages)} */}
                       {chatMessages.map((currentValue, index) =>
                         currentValue.messages
                           .filter((message) => message.chatID === idChatRoom) // Lọc đúng chatID
@@ -245,28 +389,60 @@ export default function DashBoard() {
                             new Date(a.timestamp) < new Date(b.timestamp)
                               ? -1
                               : 1
-                          ) // Sắp xếp tăng dần
+                          ) // Sắp xếp tăng dần và hiển thị message gửi
                           .map((message, index) =>
                             message.senderID === user.id ? (
                               <div
                                 key={index}
                                 className="container__messsage--send"
                               >
-                                <div key={index} className="message__send">
-                                  <p className="content__message--send">
-                                    {message.content}
+                                <div className="content__message--send">
+                                  <p>{message.content}</p>
+                                </div>
+
+                                <div className="message--send--time">
+                                  <p>
+                                    {new Date(
+                                      message.timestamp
+                                    ).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
                                   </p>
+
+                                  {/* {console.log(message._id)} */}
+
+                                  {idLastestMessage == message._id ? (
+                                    message.readBy &&
+                                    message.readBy.length > 0 ? (
+                                      <p>Đã Xem</p>
+                                    ) : (
+                                      <p>{messageSendStatus}</p>
+                                    )
+                                  ) : null}
                                 </div>
                               </div>
                             ) : (
+                              //Hiển thị message nhận
                               <div
                                 key={index}
                                 className="container__message--received"
                               >
-                                <div className="message__received">
-                                  <p>{message.senderID}</p>
-                                  <p className="content__message--received">
-                                    {message.content}
+                                <div className="content__message--recieved">
+                                  <p className="user--recieved">
+                                    {message.senderID}
+                                  </p>
+                                  <p>{message.content}</p>
+                                </div>
+
+                                <div className="message--recieved--time">
+                                  <p>
+                                    {new Date(
+                                      message.timestamp
+                                    ).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
                                   </p>
                                 </div>
                               </div>
@@ -276,15 +452,27 @@ export default function DashBoard() {
 
                       {/* Các Tin Nhắn Trong Luc Chat */}
                       {listMessage.map((messageInChat, index) =>
-                        messageInChat.senderID == idUser ? (
+                        messageInChat.senderID == idUser &&
+                        messageInChat.chatID == idChatRoom ? (
                           <div
                             key={index}
                             className="container__messsage--send"
                           >
-                            <div key={index} className="message__send">
-                              <p className="content__message--send">
-                                {messageInChat.message}
+                            <div className="content__message--send">
+                              <p>{messageInChat.content}</p>
+                            </div>
+
+                            <div className="message--send--time">
+                              <p>
+                                {new Date(
+                                  messageInChat.timestamp
+                                ).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
                               </p>
+
+                              <p>{messageSendStatus}</p>
                             </div>
                           </div>
                         ) : (
@@ -292,10 +480,21 @@ export default function DashBoard() {
                             key={index}
                             className="container__message--received"
                           >
-                            <div className="message__received">
-                              <p>{messageInChat.senderID}</p>
-                              <p className="content__message--received">
-                                {messageInChat.message}
+                            <div className="content__message--recieved">
+                              <p className="user--recieved">
+                                {messageInChat.senderID}
+                              </p>
+                              <p>{messageInChat.content}</p>
+                            </div>
+
+                            <div className="message--recieved--time">
+                              <p>
+                                {new Date(
+                                  messageInChat.timestamp
+                                ).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
                               </p>
                             </div>
                           </div>
@@ -320,7 +519,6 @@ export default function DashBoard() {
                           borderRadius: "5px",
                         }}
                       />
-
                       <button
                         style={{
                           padding: "10px 20px",
@@ -333,6 +531,17 @@ export default function DashBoard() {
                         onClick={sendMessage}
                       >
                         Send
+                      </button>
+                      <button
+                        style={{
+                          backgroundColor: "black",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "5px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Disconnect
                       </button>
                     </div>
                   </div>
